@@ -1,8 +1,6 @@
 name: Run Python Script
 
 on:
-  # schedule:
-  #   - cron: '0 0 * * *'  # This cron expression schedules the workflow to run daily at midnight UTC
   workflow_dispatch:  # This allows you to manually trigger the workflow
 
 jobs:
@@ -34,7 +32,8 @@ jobs:
       - name: Install ChromeDriver
         run: |
           CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
-          wget https://chromedriver.storage.googleapis.com/$CHROME_VERSION/chromedriver_linux64.zip
+          CHROMEDRIVER_VERSION=$(curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION)
+          wget https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip
           unzip chromedriver_linux64.zip
           sudo mv chromedriver /usr/local/bin/
           chromedriver --version
