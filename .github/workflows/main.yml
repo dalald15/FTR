@@ -24,17 +24,32 @@ jobs:
         run: |
           choco install googlechrome -y
 
-      - name: Verify Chrome Installation
+      - name: Detect Chrome Version and Download ChromeDriver
         run: |
-          Get-Command "C:\Program Files\Google\Chrome\Application\chrome.exe"
+          $chromePaths = @(
+            "C:\Program Files\Google\Chrome\Application\chrome.exe",
+            "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+          )
 
-      - name: Download and setup ChromeDriver
-        run: |
-          $chromeVersion = (Get-Command "C:\Program Files\Google\Chrome\Application\chrome.exe").VersionInfo.ProductVersion
+          # Find the first valid Chrome installation path
+          $chromePath = $chromePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+          if (-not $chromePath) {
+              Write-Host "❌ Chrome not found! Exiting."
+              exit 1
+          }
+
+          $chromeVersion = (Get-Command $chromePath).VersionInfo.ProductVersion
+          Write-Host "✅ Chrome Version Found: $chromeVersion"
+
           $chromeMajorVersion = $chromeVersion.Split('.')[0]
+          Write-Host "🔍 Chrome Major Version: $chromeMajorVersion"
+
           $latestVersionUrl = "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$chromeMajorVersion"
           Invoke-WebRequest -Uri $latestVersionUrl -OutFile latest_version.txt
           $latestVersion = Get-Content latest_version.txt
+
+          Write-Host "📥 Downloading ChromeDriver Version: $latestVersion"
           Invoke-WebRequest -Uri "https://chromedriver.storage.googleapis.com/$latestVersion/chromedriver-win64.zip" -OutFile chromedriver.zip
           Expand-Archive -Path chromedriver.zip -DestinationPath .
           echo "$(pwd)/chromedriver-win64" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
