@@ -19,7 +19,6 @@ jobs:
       - name: Install dependencies
         run: |
           pip install selenium openpyxl pyautogui
-
       - name: Check if Chrome is installed
         id: check-chrome
         shell: powershell
@@ -37,13 +36,11 @@ jobs:
               Write-Host "❌ Chrome not found. Installing..."
               echo "chrome_found=false" >> $env:GITHUB_ENV
           }
-
       - name: Install Chrome (if missing)
         if: env.chrome_found == 'false'
         run: |
           choco install googlechrome -y
           Write-Host "✅ Chrome installed successfully."
-
       - name: Detect Chrome Version and Download ChromeDriver
         shell: powershell
         run: |
@@ -53,48 +50,39 @@ jobs:
           $maxAttempts = 3
           $attempt = 0
           $chromeVersion = $null
-
           while ($attempt -lt $maxAttempts -and -not $chromeVersion) {
-              $chromeVersion = (Get-ItemProperty "HKLM:\Software\Google\Chrome" -ErrorAction SilentlyContinue).Version
-          if (-not $chromeVersion) {
-              Write-Host "❌ Failed to detect Chrome version. Exiting."
-              exit 1
-          }
+              $chromePaths = @(
+                "C:\Program Files\Google\Chrome\Application\chrome.exe",
+                "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+              )
+              $chromePath = $chromePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+              if ($chromePath) {
+                  $chromeVersion = (Get-Item $chromePath).VersionInfo.ProductVersion
+                  if ($chromeVersion) { break }  # Exit loop if version is found
+              }
               
               Start-Sleep -s 3  # Wait before retrying
               $attempt++
           }
-
           if (-not $chromeVersion) {
               Write-Host "❌ Failed to detect Chrome version. Exiting."
               exit 1
           }
-
           Write-Host "✅ Chrome Version Found: $chromeVersion"
           $chromeMajorVersion = $chromeVersion.Split('.')[0]
           Write-Host "🔍 Chrome Major Version: $chromeMajorVersion"
-
           # Download the latest ChromeDriver matching the detected Chrome version
           $latestVersionUrl = "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$chromeMajorVersion"
-          try {
-              Invoke-WebRequest -Uri $latestVersionUrl -OutFile latest_version.txt -ErrorAction Stop
-              $latestVersion = Get-Content latest_version.txt
-          } catch {
-              Write-Host "❌ No ChromeDriver found for version $chromeMajorVersion. Trying latest stable version..."
-              $latestVersionUrl = "https://chromedriver.storage.googleapis.com/LATEST_RELEASE"
-              Invoke-WebRequest -Uri $latestVersionUrl -OutFile latest_version.txt
-              $latestVersion = Get-Content latest_version.txt
-          }
-
+          Invoke-WebRequest -Uri $latestVersionUrl -OutFile latest_version.txt
+          $latestVersion = Get-Content latest_version.txt
           Write-Host "📥 Downloading ChromeDriver Version: $latestVersion"
+          
           Invoke-WebRequest -Uri "https://chromedriver.storage.googleapis.com/$latestVersion/chromedriver-win64.zip" -OutFile chromedriver.zip
           Expand-Archive -Path chromedriver.zip -DestinationPath .
           
           echo "$(pwd)/chromedriver-win64" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
-
       - name: Verify ChromeDriver Installation
         run: |
           ./chromedriver-win64/chromedriver.exe --version
-
       - name: Run Selenium Script (Non-Headless Mode)
         run: python script.py
