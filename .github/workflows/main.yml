@@ -20,26 +20,54 @@ jobs:
         run: |
           pip install selenium openpyxl pyautogui
 
-      - name: Install Chrome using Chocolatey
-        run: |
-          choco install googlechrome -y
-
-      - name: Detect Chrome Version and Download ChromeDriver
+      - name: Check if Chrome is installed
+        id: check-chrome
+        shell: powershell
         run: |
           $chromePaths = @(
             "C:\Program Files\Google\Chrome\Application\chrome.exe",
             "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
           )
 
-          # Find the first valid Chrome installation path
+          $chromePath = $chromePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+          if ($chromePath) {
+              Write-Host "✅ Chrome found at: $chromePath"
+              echo "chrome_found=true" >> $env:GITHUB_ENV
+          } else {
+              Write-Host "❌ Chrome not found. Installing..."
+              echo "chrome_found=false" >> $env:GITHUB_ENV
+          }
+
+      - name: Install Chrome (if missing)
+        if: env.chrome_found == 'false'
+        run: |
+          choco install googlechrome -y
+          Write-Host "✅ Chrome installed successfully."
+
+      - name: Detect Chrome Version and Download ChromeDriver
+        shell: powershell
+        run: |
+          Start-Sleep -s 5 # Wait to ensure Chrome installation completes
+
+          $chromePaths = @(
+            "C:\Program Files\Google\Chrome\Application\chrome.exe",
+            "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+          )
+
           $chromePath = $chromePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
 
           if (-not $chromePath) {
-              Write-Host "❌ Chrome not found! Exiting."
+              Write-Host "❌ Chrome still not found! Exiting."
               exit 1
           }
 
           $chromeVersion = (Get-Command $chromePath).VersionInfo.ProductVersion
+          if (-not $chromeVersion) {
+              Write-Host "❌ Failed to detect Chrome version. Exiting."
+              exit 1
+          }
+
           Write-Host "✅ Chrome Version Found: $chromeVersion"
 
           $chromeMajorVersion = $chromeVersion.Split('.')[0]
