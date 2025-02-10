@@ -13,7 +13,7 @@ from selenium.webdriver.common.keys import Keys
 
 
 download_path = r"C:\Users\DalalD\Downloads"
-existing_file_path = r"C:\Users\DalalD\Desktop\ICM_OUTPUT.xlsx"
+existing_file_path = r"C:\Users\DalalD\HNI Corporation\GBSC MDM - Automation Data\FTR Data.xlsx"
 
 chrome_options = Options()
 chrome_options.add_experimental_option("detach", True)
@@ -69,6 +69,11 @@ try:
             if len(cols) > 23:
                 icm = cols[1].text
                 date_value = cols[23].text
+
+                if "/" not in date_value:
+                     # Check if there is a next column
+                    if len(cols) > 24:
+                        date_value = cols[24].text
 
                 try:
                     date_only = datetime.datetime.strptime(date_value, "%m/%d/%Y %I:%M %p").strftime("%#m/%#d/%Y")
