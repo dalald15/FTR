@@ -20,9 +20,9 @@ jobs:
         run: |
           pip install selenium openpyxl pyautogui
 
-      - name: Install Chrome using winget
+      - name: Install Chrome using Chocolatey
         run: |
-          winget install Google.Chrome --silent --accept-package-agreements --accept-source-agreements
+          choco install googlechrome -y
 
       - name: Verify Chrome Installation
         run: |
