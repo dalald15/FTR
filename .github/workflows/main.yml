@@ -35,6 +35,7 @@ jobs:
           } else {
               Write-Host "❌ Chrome not found. Installing..."
               echo "chrome_found=false" >> $env:GITHUB_ENV
+          }
 
       - name: Install Chrome (if missing)
         if: env.chrome_found == 'false'
