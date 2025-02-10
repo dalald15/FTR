@@ -1,13 +1,11 @@
 name: Run Selenium Automation
 
 on:
-  # schedule:
-  #   - cron: "0 2 * * *"  # Runs every day at 2 AM UTC (Modify as needed)
   workflow_dispatch:  # Allows manual triggering
 
 jobs:
   run-automation:
-    runs-on: windows-latest  # Non-headless mode requires Windows with UI support
+    runs-on: windows-latest  # Ensures it runs on Windows with UI support
 
     steps:
       - name: Checkout repository
@@ -22,26 +20,28 @@ jobs:
         run: |
           pip install selenium openpyxl pyautogui
 
-      - name: Download and setup Chrome
+      - name: Install Chrome using winget
         run: |
-          curl -o chrome_installer.exe "https://dl.google.com/chrome/install/latest/chrome_installer.exe"
-          Start-Process -FilePath chrome_installer.exe -ArgumentList "/silent /install" -NoNewWindow -Wait
+          winget install Google.Chrome --silent --accept-package-agreements --accept-source-agreements
+
+      - name: Verify Chrome Installation
+        run: |
+          Get-Command "C:\Program Files\Google\Chrome\Application\chrome.exe"
 
       - name: Download and setup ChromeDriver
         run: |
           $chromeVersion = (Get-Command "C:\Program Files\Google\Chrome\Application\chrome.exe").VersionInfo.ProductVersion
           $chromeMajorVersion = $chromeVersion.Split('.')[0]
-          Invoke-WebRequest -Uri "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$chromeMajorVersion" -OutFile latest_version.txt
+          $latestVersionUrl = "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$chromeMajorVersion"
+          Invoke-WebRequest -Uri $latestVersionUrl -OutFile latest_version.txt
           $latestVersion = Get-Content latest_version.txt
-          Invoke-WebRequest -Uri "C://Users//DalalD//Downloads//chromedriver-win64.zip" -OutFile chromedriver.zip
+          Invoke-WebRequest -Uri "https://chromedriver.storage.googleapis.com/$latestVersion/chromedriver-win64.zip" -OutFile chromedriver.zip
           Expand-Archive -Path chromedriver.zip -DestinationPath .
+          echo "$(pwd)/chromedriver-win64" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
 
-      - name: Run Selenium Script
-        run: python script.py
-
-      - name: Run Selenium script
-        env:
-          DISPLAY: :99  # Set the display environment variable for GUI
+      - name: Verify ChromeDriver Installation
         run: |
-          sudo Xvfb :99 -ac &
-          python your_script.py  # Replace with the path to your Python script
+          ./chromedriver-win64/chromedriver.exe --version
+
+      - name: Run Selenium Script (Non-Headless Mode)
+        run: python script.py
