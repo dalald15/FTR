@@ -55,16 +55,11 @@ jobs:
           $chromeVersion = $null
 
           while ($attempt -lt $maxAttempts -and -not $chromeVersion) {
-              $chromePaths = @(
-                "C:\Program Files\Google\Chrome\Application\chrome.exe",
-                "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
-              )
-              $chromePath = $chromePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
-
-              if ($chromePath) {
-                  $chromeVersion = (Get-Item $chromePath).VersionInfo.ProductVersion
-                  if ($chromeVersion) { break }  # Exit loop if version is found
-              }
+              $chromeVersion = (Get-ItemProperty "HKLM:\Software\Google\Chrome" -ErrorAction SilentlyContinue).Version
+          if (-not $chromeVersion) {
+              Write-Host "❌ Failed to detect Chrome version. Exiting."
+              exit 1
+          }
               
               Start-Sleep -s 3  # Wait before retrying
               $attempt++
@@ -81,10 +76,17 @@ jobs:
 
           # Download the latest ChromeDriver matching the detected Chrome version
           $latestVersionUrl = "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$chromeMajorVersion"
-          Invoke-WebRequest -Uri $latestVersionUrl -OutFile latest_version.txt
-          $latestVersion = Get-Content latest_version.txt
+          try {
+              Invoke-WebRequest -Uri $latestVersionUrl -OutFile latest_version.txt -ErrorAction Stop
+              $latestVersion = Get-Content latest_version.txt
+          } catch {
+              Write-Host "❌ No ChromeDriver found for version $chromeMajorVersion. Trying latest stable version..."
+              $latestVersionUrl = "https://chromedriver.storage.googleapis.com/LATEST_RELEASE"
+              Invoke-WebRequest -Uri $latestVersionUrl -OutFile latest_version.txt
+              $latestVersion = Get-Content latest_version.txt
+          }
+
           Write-Host "📥 Downloading ChromeDriver Version: $latestVersion"
-          
           Invoke-WebRequest -Uri "https://chromedriver.storage.googleapis.com/$latestVersion/chromedriver-win64.zip" -OutFile chromedriver.zip
           Expand-Archive -Path chromedriver.zip -DestinationPath .
           
