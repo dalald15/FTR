@@ -29,6 +29,7 @@ jobs:
             "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
           )
           $chromePath = $chromePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+          
           if ($chromePath) {
               Write-Host "✅ Chrome found at: $chromePath"
               echo "chrome_found=true" >> $env:GITHUB_ENV
@@ -46,30 +47,47 @@ jobs:
       - name: Detect Chrome Version and Download ChromeDriver
         shell: powershell
         run: |
-          Start-Sleep -s 5 # Wait to ensure Chrome installation completes
-          $chromePaths = @(
-            "C:\Program Files\Google\Chrome\Application\chrome.exe",
-            "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
-          )
-          $chromePath = $chromePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
-          if (-not $chromePath) {
-              Write-Host "❌ Chrome still not found! Exiting."
-              exit 1
+          Start-Sleep -s 5  # Ensure installation completes
+          
+          # Retry Chrome detection up to 3 times
+          $maxAttempts = 3
+          $attempt = 0
+          $chromeVersion = $null
+
+          while ($attempt -lt $maxAttempts -and -not $chromeVersion) {
+              $chromePaths = @(
+                "C:\Program Files\Google\Chrome\Application\chrome.exe",
+                "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+              )
+              $chromePath = $chromePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+              if ($chromePath) {
+                  $chromeVersion = (Get-Command $chromePath).VersionInfo.ProductVersion
+                  if ($chromeVersion) { break }  # Exit loop if version is found
+              }
+              
+              Start-Sleep -s 3  # Wait before retrying
+              $attempt++
           }
-          $chromeVersion = (Get-Command $chromePath).VersionInfo.ProductVersion
+
           if (-not $chromeVersion) {
               Write-Host "❌ Failed to detect Chrome version. Exiting."
               exit 1
           }
+
           Write-Host "✅ Chrome Version Found: $chromeVersion"
           $chromeMajorVersion = $chromeVersion.Split('.')[0]
           Write-Host "🔍 Chrome Major Version: $chromeMajorVersion"
+
+          # Download the latest ChromeDriver matching the detected Chrome version
           $latestVersionUrl = "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$chromeMajorVersion"
           Invoke-WebRequest -Uri $latestVersionUrl -OutFile latest_version.txt
           $latestVersion = Get-Content latest_version.txt
           Write-Host "📥 Downloading ChromeDriver Version: $latestVersion"
+          
           Invoke-WebRequest -Uri "https://chromedriver.storage.googleapis.com/$latestVersion/chromedriver-win64.zip" -OutFile chromedriver.zip
           Expand-Archive -Path chromedriver.zip -DestinationPath .
+          
           echo "$(pwd)/chromedriver-win64" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
 
       - name: Verify ChromeDriver Installation
