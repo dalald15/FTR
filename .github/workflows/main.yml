@@ -62,7 +62,7 @@ jobs:
               $chromePath = $chromePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
 
               if ($chromePath) {
-                  $chromeVersion = (Get-Command $chromePath).VersionInfo.ProductVersion
+                  $chromeVersion = (Get-Item $chromePath).VersionInfo.ProductVersion
                   if ($chromeVersion) { break }  # Exit loop if version is found
               }
               
