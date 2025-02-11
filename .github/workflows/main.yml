@@ -81,19 +81,19 @@ jobs:
           # Download the latest ChromeDriver matching the detected Chrome version
           $latestVersionUrl = "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$chromeMajorVersion"
           try {
-              Invoke-WebRequest -Uri $latestVersionUrl -OutFile latest_version.txt
-              $latestVersion = Get-Content latest_version.txt
-              Write-Host "📥 Downloading ChromeDriver Version: $latestVersion"
-              Invoke-WebRequest -Uri "https://chromedriver.storage.googleapis.com/$latestVersion/chromedriver-win64.zip" -OutFile chromedriver.zip
+            Invoke-WebRequest -Uri $latestVersionUrl -OutFile latest_version.txt
+            $latestVersion = Get-Content latest_version.txt
+            Write-Host "📥 Downloading ChromeDriver Version: $latestVersion"
+            Invoke-WebRequest -Uri "https://chromedriver.storage.googleapis.com/$latestVersion/chromedriver-win64.zip" -OutFile chromedriver.zip
           } catch {
-              Write-Host "❌ Failed to download ChromeDriver for version $chromeMajorVersion. Falling back to stable version."
-              $latestVersion = "114.0.5735.90"  # Example stable version
-              Write-Host "📥 Downloading ChromeDriver Version: $latestVersion"
-              Invoke-WebRequest -Uri "https://chromedriver.storage.googleapis.com/$latestVersion/chromedriver-win64.zip" -OutFile chromedriver.zip
+            Write-Host "❌ Failed to download ChromeDriver for version $chromeMajorVersion. Falling back to stable version."
+            $latestVersion = "114.0.5735.90"  # Example stable version
+            Write-Host "📥 Downloading ChromeDriver Version: $latestVersion"
+            Invoke-WebRequest -Uri "https://chromedriver.storage.googleapis.com/$latestVersion/chromedriver-win64.zip" -OutFile chromedriver.zip
           }
           
           Expand-Archive -Path chromedriver.zip -DestinationPath .
-          echo "$(pwd)/chromedriver-win64" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          echo "$(pwd)/chromedriver-win64" | Out-File -Append -Encoding utf8 "$env:GITHUB_PATH"
 
       - name: Verify ChromeDriver Installation
         run: |
